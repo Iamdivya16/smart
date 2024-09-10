@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Medical History</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Include CryptoJS for encryption -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+  <section id="patient-history">
+    <h2>Your Medical History</h2>
+    <div id="medical-records">
+      <!-- Patient medical history details will be dynamically inserted here -->
+    </div>
+
+    <h3>Upload Prescription</h3>
+    <input type="file" id="prescription-upload" accept="image/*">
+
+    <!-- Fingerprint Scan -->
+    <label for="fingerprint">Scan Fingerprint for Prescription:</label><br>
+    <input type="button" value="Scan Fingerprint" id="prescriptionFingerprintBtn"><br><br>
+    
+    <button onclick="authenticateFingerprint()">Submit Prescription</button>
+  </section>
+
+  <script src="script.js"></script>
+  <script>
+    // Secret key for encryption (Use a secure method to generate and store this key)
+    const secretKey = 'your-secure-key'; // Replace with a securely generated key
+
+    // Encrypt data using CryptoJS
+    function encryptData(data) {
+      return CryptoJS.AES.encrypt(data, secretKey).toString();
+    }
+
+    // Fingerprint scanning logic
+    document.getElementById('prescriptionFingerprintBtn').addEventListener('click', async function() {
+      try {
+        // Request USB device (fingerprint scanner)
+        const device = await navigator.usb.requestDevice({
+          filters: [{ vendorId: 0x1234 }]  // Replace with your scanner's vendorId
+        });
+
+        await device.open(); // Open device
+        await device.selectConfiguration(1); // Select configuration
+        await device.claimInterface(0); // Claim interface
+
+        const data = new Uint8Array(64);  // Modify based on scanner's output size
+        const result = await device.transferIn(1, data.length);
+
+        if (result.data) {
+          const fingerprint = result.data.buffer; // Capture fingerprint data
+
+          // Convert fingerprint to hexadecimal string
+          const fingerprintHex = Array.from(new Uint8Array(fingerprint)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+          // Encrypt the fingerprint data
+          const encryptedFingerprint = encryptData(fingerprintHex);
+          console.log("Encrypted Fingerprint: ", encryptedFingerprint); // For testing purposes
+
+          alert("Fingerprint captured and encrypted successfully!");
+
+          // Further processing with encrypted data...
+        }
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

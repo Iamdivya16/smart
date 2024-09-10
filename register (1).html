@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Page</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Include CryptoJS Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <h2>Register</h2>
+
+    <!-- Horizontal selection for Doctor and Patient -->
+    <div class="role-selection">
+        <div class="role-option" id="patientOption" onclick="selectRole('patient')">Patient</div>
+        <div class="role-option" id="doctorOption" onclick="selectRole('doctor')">Doctor</div>
+    </div>
+
+    <form id="registerForm">
+        <!-- Common Fields for both -->
+        <input type="text" id="fullName" placeholder="Full Name" required><br>
+
+        <!-- Email (Changes based on role) -->
+        <div id="emailField">
+            <input type="email" id="email" placeholder="Email" required><br>
+        </div>
+
+        <!-- Doctor's Additional Fields (Department Specialization) -->
+        <div id="doctorFields" style="display: none;">
+            <input type="email" placeholder="Official Email" id="officialEmail"><br>
+
+            <label for="department">Area of Specialization:</label><br>
+            <select id="department" name="department">
+                <option value="cardiology">Cardiology</option>
+                <option value="neurology">Neurology</option>
+                <option value="orthopedics">Orthopedics</option>
+                <option value="pediatrics">Pediatrics</option>
+                <option value="radiology">Radiology</option>
+                <option value="surgery">Surgery</option>
+                <option value="dermatology">Dermatology</option>
+            </select><br><br>
+        </div>
+
+        <!-- Password Fields -->
+        <input type="password" id="password" placeholder="Create Password" required><br>
+        <input type="password" id="confirmPassword" placeholder="Confirm Password" required><br>
+
+        <!-- Fingerprint Scan -->
+        <label for="fingerprint">Scan your fingerprint:</label><br>
+        <input type="button" value="Scan Fingerprint" id="fingerprintBtn"><br><br>
+        <div id="result"></div>
+        <img id="fingerprintImage" src="" alt="Scanned Fingerprint" style="display:none;"><br><br>
+
+        <button type="submit">Register</button>
+    </form>
+</div>
+
+<script>
+    // Encryption key
+    const encryptionKey = 'your-secure-key'; // Replace with a securely generated key
+
+    function encryptData(data) {
+        return CryptoJS.AES.encrypt(data, encryptionKey).toString();
+    }
+
+    document.getElementById('registerForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent form submission
+
+        // Get the form data
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        const officialEmail = document.getElementById('officialEmail') ? document.getElementById('officialEmail').value : '';
+
+        // Encrypt sensitive data
+        const encryptedFullName = encryptData(fullName);
+        const encryptedEmail = encryptData(email);
+        const encryptedPassword = encryptData(password);
+        const encryptedOfficialEmail = officialEmail ? encryptData(officialEmail) : '';
+
+        console.log('Encrypted Full Name:', encryptedFullName);
+        console.log('Encrypted Email:', encryptedEmail);
+        console.log('Encrypted Password:', encryptedPassword);
+        console.log('Encrypted Official Email:', encryptedOfficialEmail);
+
+        // Example of sending encrypted data to the server
+        // Here, replace 'yourServerEndpoint' with your actual endpoint URL
+        fetch('yourServerEndpoint', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fullName: encryptedFullName,
+                email: encryptedEmail,
+                password: encryptedPassword,
+                officialEmail: encryptedOfficialEmail
+            })
+        }).then(response => response.json())
+        .then(data => console.log('Success:', data))
+        .catch((error) => console.error('Error:', error));
+    });
+
+    // Handle fingerprint scan button click
+    document.getElementById('fingerprintBtn').addEventListener('click', async function() {
+        try {
+            // Request USB device (fingerprint scanner)
+            const device = await navigator.usb.requestDevice({
+                filters: [{ vendorId: 0x1234 }]  // Replace with your scanner's vendorId
+            });
+
+            await device.open(); // Open device
+            await device.selectConfiguration(1); // Select configuration
+            await device.claimInterface(0); // Claim interface
+
+            const data = new Uint8Array(64);  // Modify based on scanner's output size
+            const result = await device.transferIn(1, data.length);
+
+            if (result.data) {
+                const fingerprint = result.data.buffer; // Capture fingerprint data
+                const fingerprintHex = Array.from(new Uint8Array(fingerprint)).map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                // Encrypt fingerprint data
+                const encryptedFingerprint = encryptData(fingerprintHex);
+                console.log('Encrypted Fingerprint:', encryptedFingerprint);
+
+                alert("Fingerprint captured and encrypted successfully!");
+                document.getElementById('fingerprintImage').style.display = 'block'; // Display fingerprint image (if needed)
+            }
+        } catch (error) {
+            alert("Error: " + error.message);
+        }
+    });
+
+    function selectRole(role) {
+        if (role === 'doctor') {
+            document.getElementById('doctorFields').style.display = 'block';
+        } else {
+            document.getElementById('doctorFields').style.display = 'none';
+        }
+    }
+</script>
+</body>
+</html>
